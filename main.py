@@ -1,32 +1,42 @@
 import json
 from fastapi import FastAPI, Request
 from starlette.responses import Response, JSONResponse
+from typing import List
+from pydantic import BaseModel
+from datetime import datetime
 
 app = FastAPI()
 
 
-@app.get("/")
-def root(request: Request):
+@app.get("/ping")
+def ping():
+    return Response(content="pong", media_type="text/plain", status_code=200)
 
-    api_key = request.headers.get("x-api-key")
-
-    if api_key != "12345678":
-        return JSONResponse(
-            status_code=403,
-            content={"message": "Clé API non reconnue. Accès refusé."}
-        )
-
-    accept_header = request.headers.get("accept")
-    if(accept_header not in ["text/html", "text/plain"]):
-        return JSONResponse(
-            status_code=400,
-            content={
-                "message": "Type de format non supporté. Seuls 'text/html' ou 'text/plain' sont acceptés."
-            }
-        )
+@app.get("/home")
+def home():
+    html_content = "<h1>Welcome home!</h1>"
+    return Response(content=html_content, media_type="text/html", status_code=200)
 
 @app.get("/{full_path:path}")
-def catch_all(full_path: str):
-    not_found_message = {"detail": f"Page '/{full_path}' not found"}
-    return Response(content=json.dumps(not_found_message), status_code=404, media_type="application/json")
+def error():
+    not_found_html = "<p>404 NOT FOUND</p>" 
+    return Response(content=not_found_html, media_type="text/html", status_code=404)
 
+class Post(BaseModel):
+    author: str
+    title: str
+    content: str
+    creation_datetime: datetime
+
+posts = []
+
+@app.post("/posts")
+def add_posts(new_posts: List[Post]):
+    posts.extend(new_posts)
+    return JSONResponse(content=[post.model_dump(mode="json") for post in posts], status_code=201)
+
+@app.get("/posts")
+def get_posts():
+    if not posts:
+        return JSONResponse(content={"message": "No posts found"}, status_code=404)
+    return JSONResponse(content=[post.model_dump(mode="json") for post in posts], status_code=200)
