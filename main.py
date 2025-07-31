@@ -40,3 +40,14 @@ def get_posts():
     if not posts:
         return JSONResponse(content={"message": "No posts found"}, status_code=404)
     return JSONResponse(content=[post.model_dump(mode="json") for post in posts], status_code=200)
+
+ @app.put("/posts")
+def put_posts(updated_posts: List[Post]):
+    titles = {post.title: post for post in posts}
+    for new_post in updated_posts:
+        if new_post.title in titles:
+            idx = posts.index(titles[new_post.title])
+            posts[idx] = new_post
+        else:
+            posts.append(new_post)
+    return JSONResponse(content=[post.model_dump(mode="json") for post in posts], status_code=200)   
